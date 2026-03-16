@@ -1,4 +1,5 @@
 const http = require('http');
+const https = require('https');
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const TIMEOUT_MS = 60_000;
