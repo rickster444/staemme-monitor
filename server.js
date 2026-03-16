@@ -51,7 +51,7 @@ function sendDiscordWebhook(loggedIn, username) {
         },
     };
 
-    const req = http.request(options, (res) => {
+    const req = https.request(options, (res) => {
         console.log(`[Server] Discord Webhook gesendet: ${loggedIn ? 'LOGIN' : 'LOGOUT'} (${res.statusCode})`);
     });
     req.on('error', (e) => console.error('[Server] Webhook Fehler:', e.message));
