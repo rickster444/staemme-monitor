@@ -1,8 +1,10 @@
 const http = require('http');
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
-const TIMEOUT_MS = 60_000;
+const TIMEOUT_MS = 90_000; // 90 Sekunden
 
 let lastHeartbeat = null;
 let lastStatus = null;
@@ -70,6 +72,14 @@ function startTimeoutTimer() {
     }, TIMEOUT_MS);
 }
 
+// MIME Types für statische Dateien
+const MIME_TYPES = {
+    '.html': 'text/html',
+    '.js':   'application/javascript',
+    '.json': 'application/json',
+    '.ico':  'image/x-icon',
+};
+
 const server = http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -81,17 +91,43 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // ── Statische Dateien aus /public ──────────────────────
+    if (req.method === 'GET' && (req.url.startsWith('/sw') || req.url === '/monitor.html')) {
+        const filePath = path.join(__dirname, 'public', req.url);
+        const ext = path.extname(filePath);
+        const contentType = MIME_TYPES[ext] || 'text/plain';
+
+        // Service Worker braucht speziellen Header
+        if (req.url.includes('sw.js')) {
+            res.setHeader('Service-Worker-Allowed', '/');
+            res.setHeader('Cache-Control', 'no-cache');
+        }
+
+        fs.readFile(filePath, (err, data) => {
+            if (err) {
+                res.writeHead(404);
+                res.end('Not found');
+                return;
+            }
+            res.writeHead(200, { 'Content-Type': contentType });
+            res.end(data);
+        });
+        return;
+    }
+
+    // ── Status-Endpunkt ────────────────────────────────────
     if (req.method === 'GET' && req.url === '/') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
             status: 'running',
-            lastHeartbeat: lastHeartbeat,
+            lastHeartbeat,
             currentStatus: lastStatus,
-            lastUsername: lastUsername,
+            lastUsername,
         }));
         return;
     }
 
+    // ── Heartbeat-Endpunkt ─────────────────────────────────
     if (req.method === 'POST' && req.url === '/heartbeat') {
         let body = '';
         req.on('data', chunk => body += chunk);
