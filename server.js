@@ -72,7 +72,6 @@ function startTimeoutTimer() {
     }, TIMEOUT_MS);
 }
 
-// MIME Types für statische Dateien
 const MIME_TYPES = {
     '.html': 'text/html',
     '.js':   'application/javascript',
@@ -91,13 +90,11 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // ── Statische Dateien aus /public ──────────────────────
     if (req.method === 'GET' && (req.url.startsWith('/sw') || req.url === '/monitor.html')) {
         const filePath = path.join(__dirname, 'public', req.url);
         const ext = path.extname(filePath);
         const contentType = MIME_TYPES[ext] || 'text/plain';
 
-        // Service Worker braucht speziellen Header
         if (req.url.includes('sw.js')) {
             res.setHeader('Service-Worker-Allowed', '/');
             res.setHeader('Cache-Control', 'no-cache');
@@ -115,7 +112,6 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // ── Status-Endpunkt ────────────────────────────────────
     if (req.method === 'GET' && req.url === '/') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
@@ -127,7 +123,6 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // ── Heartbeat-Endpunkt ─────────────────────────────────
     if (req.method === 'POST' && req.url === '/heartbeat') {
         let body = '';
         req.on('data', chunk => body += chunk);
@@ -139,11 +134,18 @@ const server = http.createServer((req, res) => {
             } catch (_) {}
 
             lastHeartbeat = new Date().toISOString();
-            lastUsername = username;
 
-            if (lastStatus !== 'online') {
+            if (lastStatus === 'online' && lastUsername !== username) {
+                // Anderer User hat übernommen → sofort Logout vom alten
+                console.log('[Server] User gewechselt:', lastUsername, '→', username);
+                sendDiscordWebhook(false, lastUsername);
+                setTimeout(() => sendDiscordWebhook(true, username), 1000);
+                lastUsername = username;
+            } else if (lastStatus !== 'online') {
+                // Neuer Login
                 console.log('[Server] Login erkannt:', username || 'Unbekannt');
                 lastStatus = 'online';
+                lastUsername = username;
                 sendDiscordWebhook(true, username);
             }
 
