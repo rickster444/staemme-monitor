@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>DS Monitor</title>
+</head>
+<body>
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .then(reg => {
+            console.log('[Monitor] Service Worker registriert:', reg.scope);
+        })
+        .catch(err => {
+            console.error('[Monitor] Service Worker Fehler:', err);
+        });
+}
+
+// Nachrichten vom Tampermonkey-Script empfangen und an SW weiterleiten
+window.addEventListener('message', (event) => {
+    if (!navigator.serviceWorker.controller) return;
+    navigator.serviceWorker.controller.postMessage(event.data);
+});
+</script>
+</body>
+</html>
