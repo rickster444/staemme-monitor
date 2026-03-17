@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
-const TIMEOUT_MS = 90_000; // 90 Sekunden
+const TIMEOUT_MS = 5 * 60 * 1000; // 5 Minuten
 
 let lastHeartbeat = null;
 let lastStatus = null;
